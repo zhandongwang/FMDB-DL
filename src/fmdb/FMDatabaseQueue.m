@@ -96,7 +96,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
         }
         
         _path = FMDBReturnRetained(aPath);
-        
+        //串行队列
         _queue = dispatch_queue_create([[NSString stringWithFormat:@"fmdb.%@", self] UTF8String], NULL);
         dispatch_queue_set_specific(_queue, kDispatchQueueSpecificKey, (__bridge void *)self, NULL);
         _openFlags = openFlags;
@@ -143,7 +143,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
 
 - (void)close {
     FMDBRetain(self);
-    dispatch_sync(_queue, ^() {
+    dispatch_sync(_queue, ^() {//自定义的串行队列中同步执行
         [self->_db close];
         FMDBRelease(_db);
         self->_db = 0x00;
@@ -180,12 +180,12 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
     /* Get the currently executing queue (which should probably be nil, but in theory could be another DB queue
      * and then check it against self to make sure we're not about to deadlock. */
     FMDatabaseQueue *currentSyncQueue = (__bridge id)dispatch_get_specific(kDispatchQueueSpecificKey);
-    assert(currentSyncQueue != self && "inDatabase: was called reentrantly on the same queue, which would lead to a deadlock");
+    assert(currentSyncQueue != self && "inDatabase: was called reentrantly on the same queue, which would lead to a deadlock");//防止死锁
 #endif
     
     FMDBRetain(self);
     
-    dispatch_sync(_queue, ^() {
+    dispatch_sync(_queue, ^() {//串行队列中同步执行
         
         FMDatabase *db = [self database];
         
